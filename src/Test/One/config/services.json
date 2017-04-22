@@ -1,0 +1,6 @@
+{
+  "services": [{
+    "name": "serv-one",
+    "class": "Service/ServOne"
+  }]
+}

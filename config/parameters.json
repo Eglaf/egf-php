@@ -1,0 +1,9 @@
+{
+  "mydb": {
+    "host": "localhost",
+    "username": "root",
+    "password": "",
+    "database": "egf-teszt",
+    "port": ""
+  }
+}
