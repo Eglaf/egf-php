@@ -169,7 +169,7 @@ class App {
      * @return $this
      */
     protected function loadGlobalConfigs() {
-        if ($this->oPermCache->needToRecalculate('egf/global-config')) {
+        if (!$this->oPermCache->has('egf/global-config')) {
             $aGlobalConfig = [];
             foreach (['configs', 'parameters', 'bundles'] as $sConf) {
                 $sConfFile = "{$this->getPathToRoot()}/config/{$sConf}.json";
@@ -213,7 +213,7 @@ class App {
         $aAutoloadPsr4 = require("{$this->sPathToRoot}/vendor/composer/autoload_psr4.php");
 
         // Load services.
-        if ($this->oPermCache->needToRecalculate('egf/services')) {
+        if (!$this->oPermCache->has('egf/services')) {
             $aInitiativeServices = [];
             foreach ($this->aGlobalConfigs['bundles']['bundles'] as $sBundle) {
                 $aInitiativeServices = array_merge($aInitiativeServices, $this->getInitiativeServicesOfBundle($sBundle, $aAutoloadPsr4));

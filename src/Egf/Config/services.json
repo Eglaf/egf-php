@@ -6,6 +6,9 @@
     "name": "log",
     "class": "Service\\Log"
   }, {
+    "name": "permCache",
+    "class": "Service/PermCache"
+  }, {
     "name": "myDb",
     "class": "Service\\MyDb\\MyDb"
   }, {

@@ -46,18 +46,19 @@ class PermCache {
 
 
     /**
-     * Decide if the cache needs to be recalculated. Always does that in dev environment or if the file does not exist.
-     * @param string $sKey
-     * @return bool
+     * Gives back true if the cache is already exists and false if not.
+     * In dev environment it always gives back false!
+     * @param string $sKey Cache key.
+     * @return bool True if cache exists and prod environment.
      */
-    public function needToRecalculate($sKey) {
-        return ($this->bDev || !file_exists($this->getPathFromKey($sKey)));
+    public function has($sKey) {
+        return (file_exists($this->getPathFromKey($sKey)) && !$this->bDev);
     }
 
     /**
      * Sets value to a cache file.
-     * @param string $sKey
-     * @param mixed  $xValue
+     * @param string $sKey   Cache key.
+     * @param mixed  $xValue Data to store.
      * @return $this
      */
     public function set($sKey, $xValue) {
@@ -72,8 +73,8 @@ class PermCache {
 
     /**
      * Gets value from a cache file.
-     * @param string $sKey
-     * @return mixed
+     * @param string $sKey Cache key.
+     * @return mixed Stored data.
      */
     public function get($sKey) {
         $sPath = $this->getPathFromKey($sKey);
@@ -97,7 +98,7 @@ class PermCache {
         if (strpos($sKey, '/')) {
             $sSubDir = '';
             $aFragments = explode('/', $sKey);
-            for ($i = 0; $i < count($aFragments)-1; $i++) {
+            for ($i = 0; $i < count($aFragments) - 1; $i++) {
                 $sSubDir .= "/{$aFragments[$i]}";
             }
 
