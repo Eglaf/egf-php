@@ -63,7 +63,7 @@ class Util {
      * @param   string $sType   Type of character pool. Default: alnum. Options: alnum, alpha, hexdec, numeric, nozero, distinct.
      * @return string Random string.
      */
-    public static function getRandomString($iLength = 8, $sType = 'alnum') {
+    public static function getRandomString($iLength = 12, $sType = 'alnum') {
         if ($sType == 'alnum') {
             $sPool = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         }
@@ -82,26 +82,34 @@ class Util {
         else if ($sType == 'distinct') {
             $sPool = '2345679ACDEFHJKLMNPRSTUVWXYZ';
         }
+        elseif ($sType == 'secure') {
+            $sPool = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ*#&$^!@-=';
+        }
         else {
             throw new \Exception("Invalid type for getRandomString function.");
         }
 
-        // Split the pool into an array of characters //
+        // Split the pool into an array of characters.
         $arPool = str_split($sPool, 1);
         $sResult = '';
 
-        // Select a random character from the pool and add it to the string //
+        // Select a random character from the pool and add it to the string.
         for ($i = 0; $i < $iLength; $i++) {
-            $sResult .= $arPool[mt_rand(0, count($arPool) - 1)];
+            if (function_exists('random_int')) {
+                $sResult .= $arPool[random_int(0, count($arPool) - 1)];
+            }
+            else {
+                $sResult .= $arPool[mt_rand(0, count($arPool) - 1)];
+            }
         }
 
-        // Make sure alnum strings contain at least one letter and one digit //
-        if ($sType === 'alnum' AND $iLength > 1) {
-            // Add a random digit //
+        // Make sure alnum strings contain at least one letter and one digit.
+        if ($sType === 'alnum' && $iLength > 1) {
+            // Add a random digit.
             if (ctype_alpha($sResult)) {
                 $sResult[mt_rand(0, $iLength - 1)] = chr(mt_rand(48, 57));
             }
-            // Add a random letter //
+            // Add a random letter.
             else if (ctype_digit($sResult)) {
                 $sResult[mt_rand(0, $iLength - 1)] = chr(mt_rand(65, 90));
             }
@@ -226,9 +234,8 @@ class Util {
         $aParts = preg_split('/([\s\n\r]+)/u', $sString, NULL, PREG_SPLIT_DELIM_CAPTURE);
 
         $iLength = 0;
-        $iLastPart = 0; // todo into for...
         $sFinalPostFix = '';
-        for (; $iLastPart < count($aParts); ++$iLastPart) {
+        for ($iLastPart = 0; $iLastPart < count($aParts); ++$iLastPart) {
             $iLength += strlen($aParts[$iLastPart]);
             if ($iLength > $iMaxLength) {
                 $sFinalPostFix = $sPostFix;
@@ -258,6 +265,7 @@ class Util {
      * Trim slashes (and backslash) from a string.
      * @param string $sVar
      * @return string
+     * @deprecated
      */
     public static function trimSlash($sVar) {
         return trim($sVar, '/ \\');
@@ -337,14 +345,13 @@ class Util {
 
     /** @const Flags to work with the slashing method. */
     const
-        slashingNs = 1,
-        slashingDir = 2,
-        slashingTrimBoth = 4,
-        slashingTrimLeft = 8,
-        slashingTrimRight = 16,
-        slashingAddBoth = 36,
-        slashingAddLeft = 72,
-        slashingAddRight = 144;
+        slashingBackslash = 1,
+        slashingTrimBoth = 2,
+        slashingTrimLeft = 4,
+        slashingTrimRight = 8,
+        slashingAddBoth = 16,
+        slashingAddLeft = 32,
+        slashingAddRight = 64;
 
     /**
      * Do some slashing stuff with a string. The slashing constants are verbose enough. One of the slashingNs or slashingDir is required.
@@ -352,28 +359,26 @@ class Util {
      * @param int    $iFlags Bitwise operators.
      * @return string
      */
-    public static function slashing($sText, $iFlags) {
-        // Ns or dir separator.
-        if ($iFlags & static::slashingNs) {
+    public static function slashing($sText, $iFlags = 0) {
+        // Backslash.
+        if ($iFlags & static::slashingBackslash) {
             $sSep = '\\';
-            $sText = preg_replace("/\\{$sSep}+/", $sSep, str_replace('/', $sSep, $sText));
+            $sText = str_replace('/', $sSep, $sText);
         }
-        elseif ($iFlags & static::slashingDir) {
-            $sSep = '/';
-            $sText = preg_replace("/\\{$sSep}+/", $sSep, str_replace('\\', $sSep, $sText));
-        }
+        // Forward slash.
         else {
-            throw new \Exception("Egf\\Util::slashing(str, flags) method needs slashingNs or slashingDir flag to do anything at all.");
+            $sSep = '/';
+            $sText = str_replace('\\', $sSep, $sText);
         }
 
         // Trim.
-        if ($iFlags & static::slashingTrimBoth) {
+        if ($iFlags & static::slashingTrimBoth || $iFlags & static::slashingAddBoth) {
             $sText = trim($sText, "{$sSep} ");
         }
-        else if ($iFlags & static::slashingTrimLeft) {
+        else if ($iFlags & static::slashingTrimLeft || $iFlags & static::slashingAddLeft) {
             $sText = ltrim($sText, "{$sSep} ");
         }
-        else if ($iFlags & static::slashingTrimRight) {
+        else if ($iFlags & static::slashingTrimRight || $iFlags & static::slashingAddRight) {
             $sText = rtrim($sText, "{$sSep} ");
         }
 
@@ -388,7 +393,7 @@ class Util {
             $sText = $sText . $sSep;
         }
 
-        return $sText;
+        return preg_replace("/\\{$sSep}+/", $sSep, $sText);
     }
 
 

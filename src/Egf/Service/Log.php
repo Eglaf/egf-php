@@ -7,8 +7,6 @@ use Egf\Util;
 
 /**
  * Class Log
- *
- * todo environment
  */
 class Log extends Ancient\Service {
 
@@ -21,7 +19,7 @@ class Log extends Ancient\Service {
      * @param int    $iDebugInfo
      */
     public function info($sRow, $iDebugInfo = 0) {
-        if (in_array($this->getConfig('environment'), ['dev', 'test'])) {
+        if ($this->app->isDev()) {
             $this->add('info', $sRow, $iDebugInfo);
         }
     }
@@ -71,7 +69,7 @@ class Log extends Ancient\Service {
      * @param int    $iDebugInfo Default: 2.
      */
     public function debug($sRow, $iDebugInfo = 2) {
-        if (in_array($this->app->getConfig('environment'), ['dev', 'test'])) {
+        if ($this->app->isDev()) {
             $this->add('debug', var_export($sRow, TRUE), $iDebugInfo);
         }
     }
@@ -91,7 +89,7 @@ class Log extends Ancient\Service {
      */
     protected function init() {
         if ( !$this->rLog) {
-            $sDir = Util::slashing("{$this->app->getPathToRoot()}/var/logs", Util::slashingDir);
+            $sDir = Util::slashing("{$this->app->getPathToRoot()}/var/logs");
             $sDate = date('Y_m_d');
 
             if ( !is_dir($sDir)) {

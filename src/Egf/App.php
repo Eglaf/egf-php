@@ -2,23 +2,27 @@
 
 namespace Egf;
 
+use \Egf\Core\Cache\Perm\PermCache;
+
 /**
- * @url http://phpenthusiast.com/blog/how-to-autoload-with-composer
- * composer dump-autoload -o
- *
- * todo App and AppDev extends AncientApp
- * todo Config: renamedServices.json ?
+ * Egf App.
  */
 class App {
+
+    /** @var bool Decide if it runs in dev environment. */
+    protected $bDev = FALSE;
+
+    /** @var PermCache $oPermCache Store Permanently data in cache directory. In case of prod environment, it'll be calculated only once. */
+    protected $oPermCache = NULL;
 
     /** @var string $sPathToRoot Path to the root directory. */
     protected $sPathToRoot = '';
 
     /** @var object[] $aGlobalConfigs Data from the global root/config directory. */
-    protected $aoGlobalConfigs = [];
+    protected $aGlobalConfigs = [];
 
     /** @var object[] Store services data (without the class) until it needs to be loaded. */
-    protected $aoInitiativeServices = [];
+    protected $aInitiativeServices = [];
 
     /** @var object[] Loaded services. */
     protected $aoServices = [];
@@ -29,6 +33,14 @@ class App {
      * Getters                                                    **         **         **         **         **         **         **         **         **         **
      *                                                          **         **         **         **         **         **         **         **         **         **
      *************************************************************************************************************************************************************/
+
+    /**
+     * Gets true if dev environment, false otherwise.
+     * @return bool
+     */
+    public function isDev() {
+        return $this->bDev;
+    }
 
     /**
      * Gets the path to project root. Works only if the Egf\App is in the vendor/ or /src somewhere.
@@ -46,8 +58,8 @@ class App {
      */
     public function get($sService) {
         if ( !(isset($this->aoServices[$sService]))) {
-            $oService = $this->aoInitiativeServices[$sService];
-            $sClass = Util::slashing("{$oService->bundle}\\{$oService->class}", Util::slashingNs | Util::slashingAddLeft);
+            $aService = $this->aInitiativeServices[$sService];
+            $sClass = Util::slashing($aService['bundle'] . "\\" . $aService['class'], Util::slashingBackslash | Util::slashingAddLeft);
 
             $this->aoServices[$sService] = new $sClass($this);
         }
@@ -83,7 +95,7 @@ class App {
      * @return mixed Value.
      */
     protected function getConfigOrParam($sType, $sKey, $xDefault = NULL) {
-        $xValue = $this->aoGlobalConfigs[$sType]->{$sKey};
+        $xValue = $this->aGlobalConfigs[$sType][$sKey];
 
         return (isset($xValue) ? $xValue : $xDefault);
     }
@@ -97,13 +109,17 @@ class App {
 
     /**
      * App constructor.
+     * @param boolean $bDev Dev environment.
      */
-    public function __construct() {
+    public function __construct($bDev = FALSE) {
+        $this->bDev = $bDev;
+
         try {
             $this
                 ->loadPathToRoot()
+                ->loadPermCache()
                 ->loadGlobalConfigs()
-                ->loadEnvironment()
+                ->loadErrorReporting()
                 ->loadBundles();
 
             $this->get('log')->info('Egf\App is running.');
@@ -132,18 +148,39 @@ class App {
     }
 
     /**
+     * Loads the permanent cache class.
+     * @return $this
+     *
+     * todo Always set to dev...
+     */
+    protected function loadPermCache() {
+        $this->oPermCache = (new PermCache())
+            ->setCacheAbsolutePath("{$this->sPathToRoot}/var/cache/perm");
+
+        if ($this->bDev) {
+            $this->oPermCache->reloadOldCache();
+        }
+
+        return $this;
+    }
+
+    /**
      * Loads config files.
      * @return $this
-     * @todo Read cache... load only if dev or not exists!
-     * @todo Assoc array instead?
      */
     protected function loadGlobalConfigs() {
-        foreach (['configs', 'parameters', 'bundles'] as $sConf) {
-            $sConfFile = "{$this->getPathToRoot()}/config/{$sConf}.json";
-            if (file_exists($sConfFile)) {
-                $this->aoGlobalConfigs[$sConf] = json_decode(file_get_contents($sConfFile));
+        if ($this->oPermCache->needToRecalculate('egf/global-config')) {
+            $aGlobalConfig = [];
+            foreach (['configs', 'parameters', 'bundles'] as $sConf) {
+                $sConfFile = "{$this->getPathToRoot()}/config/{$sConf}.json";
+                if (file_exists($sConfFile)) {
+                    $aGlobalConfig[$sConf] = json_decode(file_get_contents($sConfFile), TRUE);
+                }
             }
+            $this->oPermCache->set('egf/global-config', $aGlobalConfig);
         }
+
+        $this->aGlobalConfigs = $this->oPermCache->get('egf/global-config');
 
         return $this;
     }
@@ -151,22 +188,18 @@ class App {
     /**
      * Turn on or off the error messages, depending on the environment config. Throw exception when no dev is set!
      * @return $this
-     * @todo ez igy szar... talalj ki jobbat...
      */
-    protected function loadEnvironment() {
-        // Prod.
-        if ($this->getConfig('environment') === 'prod') {
-            error_reporting(0);
-            ini_set('display_errors', 0);
-        }
-        // Dev, test.
-        elseif (in_array($this->getConfig('environment'), ['dev', 'test'])) {
+    protected function loadErrorReporting() {
+        // Dev.
+        if ($this->bDev) {
             error_reporting(E_ALL);
             ini_set('display_errors', 1);
+
         }
-        // Neither.
+        // Prod.
         else {
-            throw new \Exception('The environment has to be "dev", "test" or "prod" in config.json!');
+            error_reporting(0);
+            ini_set('display_errors', 0);
         }
 
         return $this;
@@ -179,31 +212,40 @@ class App {
     protected function loadBundles() {
         $aAutoloadPsr4 = require("{$this->sPathToRoot}/vendor/composer/autoload_psr4.php");
 
-        foreach ($this->aoGlobalConfigs['bundles']->bundles as $sBundle) {
-            $this->preloadServicesOfBundle($sBundle, $aAutoloadPsr4);
+        // Load services.
+        if ($this->oPermCache->needToRecalculate('egf/services')) {
+            $aInitiativeServices = [];
+            foreach ($this->aGlobalConfigs['bundles']['bundles'] as $sBundle) {
+                $aInitiativeServices = array_merge($aInitiativeServices, $this->getInitiativeServicesOfBundle($sBundle, $aAutoloadPsr4));
+            }
+            $this->oPermCache->set('egf/services', $aInitiativeServices);
         }
+        $this->aInitiativeServices = $this->oPermCache->get('egf/services');
 
         return $this;
     }
 
     /**
-     * Preload services from the bundle and store the name and data of them. Load class only on first use.
+     * Get initiative services from the bundle.
      * @param string $sBundle       The name of bundle.
      * @param array  $aAutoloadPsr4 Namespaces from composer autoLoader.
+     * @return array Service configs of bundle.
      */
-    protected function preloadServicesOfBundle($sBundle, array $aAutoloadPsr4) {
+    protected function getInitiativeServicesOfBundle($sBundle, array $aAutoloadPsr4) {
+        $aInitiativeServices = [];
+
         $sPathToBundle = $this->getBundlePath($sBundle, $aAutoloadPsr4);
         $sPathToServicesConfig = realpath("{$sPathToBundle}/config/services.json");
 
         if ($sPathToServicesConfig) {
-            $oBundleServices = json_decode(file_get_contents($sPathToServicesConfig));
+            $aBundleServices = json_decode(file_get_contents($sPathToServicesConfig), TRUE);
 
-            if ($oBundleServices && is_array($oBundleServices->services)) {
-                foreach ($oBundleServices->services as $iNum => $oService) {
-                    if (isset($oService->name) && strlen($oService->name) && isset($oService->class) && strlen($oService->class)) {
-                        $oService->bundle = $sBundle;
+            if ($aBundleServices && is_array($aBundleServices['services'])) {
+                foreach ($aBundleServices['services'] as $iNum => $aService) {
+                    if (isset($aService['name']) && strlen($aService['name']) && isset($aService['class']) && strlen($aService['class'])) {
+                        $aService['bundle'] = $sBundle;
 
-                        $this->aoInitiativeServices[$oService->name] = $oService;
+                        $aInitiativeServices[$aService['name']] = $aService;
                     }
                     else {
                         $sNum = Util::stNdRdTh($iNum + 1);
@@ -216,6 +258,8 @@ class App {
                 throw new \Exception("Invalid json of {$sPathToServicesConfig}");
             }
         }
+
+        return $aInitiativeServices;
     }
 
     /**
@@ -223,7 +267,6 @@ class App {
      * @param string $sBundle       Namespace of bundle.
      * @param array  $aAutoloadPsr4 Namespaces from composer autoLoader.
      * @return string Path to bundle.
-     * @todo Test on Unix.
      */
     protected function getBundlePath($sBundle, array $aAutoloadPsr4) {
         // Looks for the bundle in src directory.

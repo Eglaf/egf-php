@@ -2,18 +2,15 @@
 
 namespace Egf\Service;
 
-use Egf\Ancient;
+use Egf\Util;
 
 /**
  * Class Session
  * @url http://www.wikihow.com/Create-a-Secure-Session-Management-System-in-PHP-and-MySQL
- * todo config... greater than 255 data length?
- * todo length from config or system var? (now 1 hour in gc)
- * todo another db? (users too?)
  */
-class Session extends Ancient\Service {
+class Session extends \Egf\Ancient\Service {
 
-    /** @var \mysqli todo */
+    /** @var \mysqli */
     protected $db;
 
 
@@ -186,7 +183,7 @@ class Session extends Ancient\Service {
     }
 
     /**
-     * Open connection... todo use mydb service.
+     * Open connection.
      * @return bool
      */
     public function open() {
@@ -201,7 +198,7 @@ class Session extends Ancient\Service {
     }
 
     /**
-     * Close connection. todo mydb
+     * Close connection.
      * @return bool
      */
     public function close() {
@@ -226,7 +223,7 @@ class Session extends Ancient\Service {
     }
 
     /**
-     * Get key. todo Secure rand instead mt_rand
+     * Get key.
      * @param string $sId
      * @return string
      */
@@ -244,7 +241,7 @@ class Session extends Ancient\Service {
             return $sId;
         }
         else {
-            return hash('sha512', uniqid(mt_rand(1, mt_getrandmax()), TRUE));
+            return hash('sha512', uniqid(Util::getRandomString(64, 'secure')), TRUE);
         }
     }
 
@@ -254,9 +251,6 @@ class Session extends Ancient\Service {
      *                                                          **         **         **         **         **         **         **         **         **         **
      *************************************************************************************************************************************************************/
 
-    /** @var string $sSalt Crypt salt. */
-    protected $sSalt = 'cH!swe!retReGu7W6bEDRup7usuDUh9THeD2CHeGE*ewr4n39=E@rAsp7c-Ph@pH';
-
     /**
      * Encrypt data.
      * @param $sData
@@ -264,7 +258,7 @@ class Session extends Ancient\Service {
      * @return mixed
      */
     protected function encrypt($sData, $sKey) {
-        $sKey = substr(hash('sha256', $this->sSalt . $sKey . $this->sSalt), 0, 32);
+        $sKey = substr(hash('sha256', $this->getParam('secret') . $sKey .$this->getParam('secret')), 0, 32);
         $iIvSize = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB);
         $sIv = mcrypt_create_iv($iIvSize, MCRYPT_RAND);
 
@@ -278,7 +272,7 @@ class Session extends Ancient\Service {
      * @return mixed
      */
     protected function decrypt($sData, $sKey) {
-        $sKey = substr(hash('sha256', $this->sSalt . $sKey . $this->sSalt), 0, 32);
+        $sKey = substr(hash('sha256', $this->getParam('secret') . $sKey . $this->getParam('secret')), 0, 32);
         $iIvSize = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB);
         $sIv = mcrypt_create_iv($iIvSize, MCRYPT_RAND);
 
