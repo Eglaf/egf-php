@@ -3,201 +3,120 @@
 namespace Egf\Service\MyDb;
 
 use Egf\Util;
+use Egf\Service\MyDb\Helper\Connection;
 
 /**
  * Class MyDb
  */
 class MyDb extends \Egf\Ancient\Service {
 
+	/** @var array $aInitiativeConnections Connection details. */
+	protected $aInitiativeConnections = [];
 
-    /** @var \mysqli */
-    protected $oConnection = NULL;
+	/** @var Connection[] $aConnections Real connections to a db. */
+	protected $aConnections = [];
 
-    /** @var int Generated ID of the last inserted row. */
-    protected $iLastInsertId = 0;
-
-    /** @var int Number of affected rows. */
-    protected $iAffectedRows = 0;
-
-    /** @var string Path to the config file. */
-    protected $sPathToConfig = '/config/';
+	/** @var string Name of the default connection. */
+	protected $sDefaultConnection = '';
 
 
-    /**
-     * Initialize.
-     */
-    public function init() {
-        $aConfig = $this->loadConfig();
-        $this->oConnection = new \mysqli($aConfig['host'], $aConfig['username'], $aConfig['password'], $aConfig['database']);
+	/**
+	 * Init.
+	 */
+	protected function init() {
+		if ( ! $this->get('permCache')->has('egf/mydb/connections')) {
+			$xMyDbDetails           = $this->getParam('myDb');
+			$aInitiativeConnections = [];
 
-        if (mysqli_connect_error()) {
-            throw $this->get('log')->exception('Failed to connect to MySql! ' . mysqli_connect_error());
-        }
+			// Multiple db connections.
+			if (Util::isArraySequential($xMyDbDetails)) {
+				foreach ($xMyDbDetails as $aOneMyDbDetails) {
+					if ($this->isValidConnection($aOneMyDbDetails)) {
+						if (isset($aOneMyDbDetails['default']) && $aOneMyDbDetails['default'] == TRUE) {
+							$this->sDefaultConnection = $aOneMyDbDetails['name'];
+						}
+						$aInitiativeConnections[ $aOneMyDbDetails['name'] ] = $aOneMyDbDetails;
+					}
+					else {
+						throw $this->get('log')->exception('Invalid MyDb connection!');
+					}
+				}
+			}
+			// Single db connection.
+			else {
+				// Single connection does not need a name, but it's required.
+				if ( ! isset($xMyDbDetails['name'])) {
+					$xMyDbDetails['name'] = 'default';
+				}
 
-        mysqli_set_charset($this->oConnection, "utf8");
-    }
+				if ($this->isValidConnection($xMyDbDetails)) {
+					$xMyDbDetails['default']                         = TRUE;
+					$aInitiativeConnections[ $xMyDbDetails['name'] ] = $xMyDbDetails;
+				}
+				else {
+					throw $this->get('log')->exception('Invalid MyDb connection!');
+				}
+			}
+
+			$this->get('permCache')->set('egf/mydb/connections', $aInitiativeConnections);
+		}
+
+		$this->aInitiativeConnections = $this->get('permCache')->get('egf/mydb/connections');
+
+	}
 
 
-    /**************************************************************************************************************************************************************
-     *                                                          **         **         **         **         **         **         **         **         **         **
-     * Use connection                                             **         **         **         **         **         **         **         **         **         **
-     *                                                          **         **         **         **         **         **         **         **         **         **
-     *************************************************************************************************************************************************************/
+	/**
+	 * Calling method of the default connection.
+	 * @param string $sMethod    Method of the connection.
+	 * @param array  $aArguments Arguments of the connection.
+	 * @return mixed
+	 */
+	public function __call($sMethod, $aArguments) {
+		if ($this->sDefaultConnection) {
+			return Util::callObjectMethod($this->getConnection($this->sDefaultConnection), $sMethod, $aArguments);
+		}
+		else {
+			throw $this->get('log')->exception('No default connection set!');
+		}
+	}
 
-    /**
-     * Run query.
-     * @param string     $sQuery  The Sql query.
-     * @param array|NULL $aParams Associative array of optional parameters. Array['type'] can be one ore more of these: i, s, d, b. Array['value'] is the searched value.
-     * @return array|\mysqli_result|bool
-     */
-    public function query($sQuery, array $aParams = []) {
-        $oStmt = $this->getConnection()->prepare($sQuery);
-        if ($oStmt) {
-            if (is_array($aParams) && count($aParams)) {
-                $aValues = [0 => ''];
-                foreach ($aParams as $aParam) {
-                    if ($aParam instanceof DbWhere\Base) {
-                        if (is_array($aParam->getValue())) {
-                            foreach ($aParam->getValue() as $xVal) {
-                                $aValues[0] .= $aParam->getType();
-                                $aValues[] = $xVal;
-                            }
-                        }
-                        else {
-                            $aValues[0] .= $aParam->getType();
-                            $aValues[] = $aParam->getValue();
-                        }
-                    }
-                    elseif (is_array($aParam) && isset($aParam['type']) && (isset($aParam['value']) || is_null($aParam['value']))) {
-                        $aValues[0] .= $aParam['type'];
-                        $aValues[] = $aParam['value'];
-                    }
-                    else {
-                        $aValues[0] .= 's';
-                        $aValues[] = $aParam;
-                    }
-                }
+	/**
+	 * Get a MyDb connection.
+	 * @param string $sConnectionName
+	 * @return Connection
+	 */
+	public function getConnection($sConnectionName) {
+		if ( ! isset($this->aConnections[ $sConnectionName ])) {
+			if (isset($this->aInitiativeConnections[ $sConnectionName ])) {
+				$this->aConnections[ $sConnectionName ] = new Helper\Connection($this->app, $this->aInitiativeConnections[ $sConnectionName ]);
+			}
+		}
 
-                // Bind parameters to statement.
-                call_user_func_array([$oStmt, 'bind_param'], $this->referenceValues($aValues));
+		return $this->aConnections[ $sConnectionName ];
+	}
 
-            }
-            $oStmt->execute();
-            $xResult = $oStmt->get_result();
+	/**
+	 * It gives back comma separated question marks between brackets.
+	 * @param array $aParams   Parameters.
+	 * @param bool  $bBrackets Decide if the brackets should be there too. Default: True.
+	 * @return string Question marks (Number of parameters).
+	 */
+	public function arrayAsQuestionMarks(array $aParams, $bBrackets = TRUE) {
+		$sResult = trim(str_repeat('?, ', count($aParams)), ', ');
 
-            $this->iLastInsertId = $this->getConnection()->insert_id;
-            $this->iAffectedRows = $this->getConnection()->affected_rows;
+		return ($bBrackets ? (' (' . $sResult . ') ') : $sResult);
+	}
 
-            $oStmt->close();
 
-            return $xResult;
-        }
-        else {
-            throw $this->get('log')->exception("Invalid Sql query! {$this->get('log')->nl()} {$sQuery} {$this->get('log')->nl()}" . var_export($aParams, TRUE));
-        }
-    }
+	/**
+	 * Check if the myDb details are valid.
+	 * @param array $aMyDb
+	 * @return bool
+	 */
+	protected function isValidConnection($aMyDb) {
+		return (is_array($aMyDb) && isset($aMyDb['name']) && isset($aMyDb['host']) && isset($aMyDb['username']) && isset($aMyDb['password']) && isset($aMyDb['database']));
+	}
 
-    /**
-     * Get connection.
-     * @return \mysqli
-     */
-    public function getConnection() {
-        return $this->oConnection;
-    }
-
-    /**
-     * Escape a string.
-     * @param mixed $xVar Unsecured string.
-     * @return string Secured string.
-     */
-    public function escape($xVar) {
-        return $this->getConnection()->real_escape_string($xVar);
-    }
-
-    /**
-     * It gives back comma separated question marks between brackets.
-     * @param array $aParams   Parameters.
-     * @param bool  $bBrackets Decide if the brackets should be there too. Default: True.
-     * @return string Question marks (Number of parameters).
-     */
-    public function arrayAsQuestionMarks(array $aParams, $bBrackets = TRUE) {
-        $sResult = trim(str_repeat('?, ', count($aParams)), ', ');
-
-        return ($bBrackets ? (' (' . $sResult . ') ') : $sResult);
-    }
-
-    /**
-     * Gives back the last inserted id.
-     * @return int
-     */
-    public function getLastInsertId() {
-        return $this->iLastInsertId;
-    }
-
-    /**
-     * It gives back the number of affected rows.
-     * @return int
-     */
-    public function getAffectedRows() {
-        return $this->iAffectedRows;
-    }
-
-    /**************************************************************************************************************************************************************
-     *                                                          **         **         **         **         **         **         **         **         **         **
-     * Protected                                                  **         **         **         **         **         **         **         **         **         **
-     *                                                          **         **         **         **         **         **         **         **         **         **
-     *************************************************************************************************************************************************************/
-
-    /**
-     * Load db login information from Config file.
-     * @return array
-     * @throws \Exception
-     * @deprecated
-     */
-    protected function loadConfig() {
-        $aResult = [];
-
-        $sConfigFile = Util::trimSlash($_SERVER['DOCUMENT_ROOT']) . DIRECTORY_SEPARATOR . Util::trimShash($this->sPathToConfig) . '/database.conf';
-        $rFile = fopen($sConfigFile, 'r');
-        if (is_resource($rFile)) {
-            while ( !feof($rFile)) {
-                $sLine = fgets($rFile);
-                $aLine = explode(':', $sLine);
-
-                if ($aLine and strlen(trim($aLine[0]))) {
-                    $aResult[trim($aLine[0])] = trim($aLine[1]);
-                }
-            }
-            fclose($rFile);
-        }
-        else {
-            throw new \Exception("Invalid db config file!");
-        }
-
-        if ( !isset($aResult['host']) || !isset($aResult['username']) || !isset($aResult['password']) || !isset($aResult['database'])) {
-            throw new \Exception('Invalid database Config!');
-        }
-
-        return $aResult;
-    }
-
-    /**
-     * Transform parameter values into reference.
-     * @param array $arr
-     * @return array
-     */
-    protected function referenceValues($arr) {
-        // Reference is required for PHP 5.3+
-        if (strnatcmp(phpversion(), '5.3') >= 0) {
-            $refs = array();
-            foreach ($arr as $key => $value) {
-                $refs[$key] = &$arr[$key];
-            }
-
-            return $refs;
-        }
-
-        return $arr;
-    }
 
 }

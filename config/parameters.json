@@ -1,10 +1,19 @@
 {
-  "mydb": {
+  "myDb": [{
+    "name": "test1",
     "host": "localhost",
     "username": "root",
     "password": "",
     "database": "egf-teszt",
     "port": ""
-  },
+  }, {
+    "default": true,
+    "name": "test2",
+    "host": "localhost",
+    "username": "root",
+    "password": "",
+    "database": "egf_test2",
+    "port": ""
+  }],
   "secret": "3utK76T5d!k60tYyVO&CFn#^WznZCMGoSWfSLv@49ypo9WKVWjchdp0GBcu5QC&M"
 }

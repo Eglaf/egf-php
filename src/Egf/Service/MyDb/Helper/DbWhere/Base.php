@@ -1,6 +1,6 @@
 <?php
 
-namespace Egf\Service\MyDb\DbWhere;
+namespace Egf\Service\MyDb\Helper\DbWhere;
 
 /**
  * Abstract DbCondition Class

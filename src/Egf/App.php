@@ -182,7 +182,7 @@ class App {
 	 * @return $this
 	 */
 	protected function loadGlobalConfigs() {
-		if ( ! $this->oPermCache->has('egf/global-config')) {
+		if ( ! $this->oPermCache->has('egf/core/global-config')) {
 			$aGlobalConfig = [];
 			foreach (['configs', 'parameters', 'bundles'] as $sConf) {
 				$sConfFile = "{$this->getPathToRoot()}/config/{$sConf}.json";
@@ -190,10 +190,10 @@ class App {
 					$aGlobalConfig[ $sConf ] = json_decode(file_get_contents($sConfFile), TRUE);
 				}
 			}
-			$this->oPermCache->set('egf/global-config', $aGlobalConfig);
+			$this->oPermCache->set('egf/core/global-config', $aGlobalConfig);
 		}
 
-		$this->aGlobalConfigs = $this->oPermCache->get('egf/global-config');
+		$this->aGlobalConfigs = $this->oPermCache->get('egf/core/global-config');
 
 		return $this;
 	}
@@ -226,7 +226,7 @@ class App {
 		$aAutoloadPsr4 = require("{$this->sPathToRoot}/vendor/composer/autoload_psr4.php");
 
 		// Load bundles.
-		if ( ! $this->oPermCache->has('egf/bundles')) {
+		if ( ! $this->oPermCache->has('egf/core/bundles')) {
 			$aBundles = [];
 			foreach ($this->aGlobalConfigs['bundles']['bundles'] as $xBundle) {
 				// If the bundle is set as a string, then it's the name.
@@ -252,9 +252,9 @@ class App {
 
 				$aBundles[ $aBundle['name'] ] = $aBundle;
 			}
-			$this->oPermCache->set('egf/bundles', $aBundles);
+			$this->oPermCache->set('egf/core/bundles', $aBundles);
 		}
-		$this->aBundles = $this->oPermCache->get('egf/bundles');
+		$this->aBundles = $this->oPermCache->get('egf/core/bundles');
 
 		return $this;
 	}
@@ -296,14 +296,14 @@ class App {
 	 */
 	protected function loadServices() {
 		// Load services.
-		if ( ! $this->oPermCache->has('egf/services')) {
+		if ( ! $this->oPermCache->has('egf/core/services')) {
 			$aInitiativeServices = [];
 			foreach ($this->aBundles as $aBundle) {
 				$aInitiativeServices = array_merge($aInitiativeServices, $this->getInitiativeServicesOfBundle($aBundle));
 			}
-			$this->oPermCache->set('egf/services', $aInitiativeServices);
+			$this->oPermCache->set('egf/core/services', $aInitiativeServices);
 		}
-		$this->aInitiativeServices = $this->oPermCache->get('egf/services');
+		$this->aInitiativeServices = $this->oPermCache->get('egf/core/services');
 
 		return $this;
 	}

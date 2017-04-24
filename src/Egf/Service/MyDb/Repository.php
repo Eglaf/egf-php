@@ -135,7 +135,7 @@ class Repository {
 		$sLimit = ' LIMIT ' . $iLimitFrom . ' , ' . ( Util::isNaturalNumber( $iLimitTo ) ? $iLimitTo : $this->iDefaultLimitTo ) . '; ';
 
 		// Sql.
-		$sSql = $sSelect . $sFrom . $sJoin . $sWhere . $sOrder . $sLimit;
+		$sSql = $sSelect . $sFrom . $sWhere . $sOrder . $sLimit;
 
 		// Execute.
 		if ( $iLimitTo == 1 ) {
