@@ -60,7 +60,7 @@ class Log extends Ancient\Service {
     public function exception($sRow, $iDebugInfo = 0) {
         $this->add('error', $sRow . PHP_EOL, $iDebugInfo);
 
-        throw new \Exception("\n\n" . preg_replace('/\s+/', ' ', $sRow) . "\n\n");
+        return new \Exception("\n\n" . preg_replace('/\s+/', ' ', $sRow) . "\n\n");
     }
 
     /**

@@ -31,7 +31,7 @@ class MyDb extends \Egf\Ancient\Service {
         $this->oConnection = new \mysqli($aConfig['host'], $aConfig['username'], $aConfig['password'], $aConfig['database']);
 
         if (mysqli_connect_error()) {
-            $this->get('log')->exception('Failed to connect to MySql! ' . mysqli_connect_error());
+            throw $this->get('log')->exception('Failed to connect to MySql! ' . mysqli_connect_error());
         }
 
         mysqli_set_charset($this->oConnection, "utf8");
@@ -93,7 +93,7 @@ class MyDb extends \Egf\Ancient\Service {
             return $xResult;
         }
         else {
-            $this->get('log')->exception("Invalid Sql query! {$this->get('log')->nl()} {$sQuery} {$this->get('log')->nl()}" . var_export($aParams, TRUE));
+            throw $this->get('log')->exception("Invalid Sql query! {$this->get('log')->nl()} {$sQuery} {$this->get('log')->nl()}" . var_export($aParams, TRUE));
         }
     }
 

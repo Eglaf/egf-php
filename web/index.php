@@ -15,6 +15,9 @@ $app = new \Egf\App(true);
 //}
 //var_dump($app->get('permCache')->get('qwer/asdf'));
 
+//echo $app->get('template')->render('Test/One:tpl', [
+//	'a' => '1234',
+//]);
 
 $app->get('log')->info('End is here...' . PHP_EOL);
 echo '<hr />END IS HERE!';
@@ -29,6 +32,9 @@ echo '<hr />END IS HERE!';
  * templates/views
  * user login
  * controllers/routing
+ * controller template (view from same bundle)
+ * forms
+ * validation
  * myDb insert/update/delete together
  * tempCache
  * translations

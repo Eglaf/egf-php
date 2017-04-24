@@ -1,6 +1,8 @@
 {
   "bundles": [
     "Egf",
-    "Test\\One"
+    {
+      "name": "Test\\One"
+    }
   ]
 }

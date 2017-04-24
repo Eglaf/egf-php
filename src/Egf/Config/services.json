@@ -9,6 +9,9 @@
     "name": "permCache",
     "class": "Service/PermCache"
   }, {
+    "name": "template",
+    "class": "Service\\Template"
+  }, {
     "name": "myDb",
     "class": "Service\\MyDb\\MyDb"
   }, {
