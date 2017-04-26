@@ -1,12 +1,25 @@
 <?php
 
+/*require_once('ses.php');
+
+$session = new Session();
+// Set to true if using https
+$session->start_session('_s', false);
+
+//$_SESSION['k2'] = 'asdf';
+
+var_dump($_SESSION['k2']);
+
+die();*/
+
+
 require_once(__DIR__ . '/../vendor/autoload.php');
 
 // New EgfApp.
 $app = new \Egf\App(true);
 
-//$app->get('session')->set('k1', 'qwer2');
-//var_dump($app->get('session')->get('k1'));
+//$app->getService('session')->set('k1', 'qwer2');
+var_dump($app->getService('session')->get('k1'));
 
 //if (!$app->get('permCache')->has('qwer/asdf')) {
 //    $app->get('permCache')->set('qwer/asdf', 'zxcv3');
@@ -17,16 +30,16 @@ $app = new \Egf\App(true);
 //	'a' => '1234',
 //]);
 
-$a = $app->get('myDb')->query('SELECT * FROM qwer WHERE id = ?', [1]);
+/*$a = $app->get('myDb')->query('SELECT * FROM qwer WHERE id = ?', [1]);
 var_dump($a);
 echo "<br />";
 foreach ($a as $b) {
 	var_dump($b);
 	echo "<br />";
 }
-echo '<hr />';
+echo '<hr />';*/
 
-$app->get('log')->info('End is here...' . PHP_EOL);
+$app->getService('log')->info('End is here...' . PHP_EOL);
 echo '<hr />END IS HERE!';
 
 
