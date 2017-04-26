@@ -33,7 +33,7 @@ class Connection {
 		$this->connection = new \mysqli($aMyDbDetails['host'], $aMyDbDetails['username'], $aMyDbDetails['password'], $aMyDbDetails['database']);
 
 		if (mysqli_connect_error()) {
-			throw $this->app->get('log')->exception('Failed to connect to MySql! ' . mysqli_connect_error());
+			throw $this->app->getService('log')->exception('Failed to connect to MySql! ' . mysqli_connect_error());
 		}
 
 		// Charset.
@@ -52,7 +52,7 @@ class Connection {
 	 * @param array|NULL $aParams Associative array of optional parameters. Array['type'] can be one ore more of these: i, s, d, b. Array['value'] is the searched value.
 	 * @return array|\mysqli_result|bool
 	 */
-	public function query($sQuery, array $aParams = []) {
+	public function execute($sQuery, array $aParams = []) {
 		/** @var \mysqli_stmt $stmt */
 		$stmt = $this->connection->prepare($sQuery);
 		if ($stmt) {
@@ -96,7 +96,7 @@ class Connection {
 			return $xResult;
 		}
 		else {
-			throw $this->app->get('log')->exception("Invalid Sql query! {$this->app->get('log')->nl()} {$sQuery} {$this->app->get('log')->nl()}" . var_export($aParams, TRUE));
+			throw $this->app->getService('log')->exception("Invalid Sql query! {$this->app->getService('log')->nl()} {$sQuery} {$this->app->getService('log')->nl()}" . var_export($aParams, TRUE));
 		}
 	}
 

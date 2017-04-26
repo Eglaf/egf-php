@@ -52,7 +52,7 @@ class Template extends \Egf\Ancient\Service {
 		}
 		// There is no file.
 		else {
-			throw $this->get('log')->exception("Invalid template path: {$sTemplate}");
+			throw $this->getService('log')->exception("Invalid template path: {$sTemplate}");
 		}
 	}
 

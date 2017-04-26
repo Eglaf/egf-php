@@ -24,7 +24,7 @@ class MyDb extends \Egf\Ancient\Service {
 	 * Init.
 	 */
 	protected function init() {
-		if ( ! $this->get('permCache')->has('egf/mydb/connections')) {
+		if ( ! $this->getService('permCache')->has('egf/mydb/connections')) {
 			$xMyDbDetails           = $this->getParam('myDb');
 			$aInitiativeConnections = [];
 
@@ -38,7 +38,7 @@ class MyDb extends \Egf\Ancient\Service {
 						$aInitiativeConnections[ $aOneMyDbDetails['name'] ] = $aOneMyDbDetails;
 					}
 					else {
-						throw $this->get('log')->exception('Invalid MyDb connection!');
+						throw $this->getService('log')->exception('Invalid MyDb connection!');
 					}
 				}
 			}
@@ -54,14 +54,14 @@ class MyDb extends \Egf\Ancient\Service {
 					$aInitiativeConnections[ $xMyDbDetails['name'] ] = $xMyDbDetails;
 				}
 				else {
-					throw $this->get('log')->exception('Invalid MyDb connection!');
+					throw $this->getService('log')->exception('Invalid MyDb connection!');
 				}
 			}
 
-			$this->get('permCache')->set('egf/mydb/connections', $aInitiativeConnections);
+			$this->getService('permCache')->set('egf/mydb/connections', $aInitiativeConnections);
 		}
 
-		$this->aInitiativeConnections = $this->get('permCache')->get('egf/mydb/connections');
+		$this->aInitiativeConnections = $this->getService('permCache')->get('egf/mydb/connections');
 
 	}
 
@@ -77,7 +77,7 @@ class MyDb extends \Egf\Ancient\Service {
 			return Util::callObjectMethod($this->getConnection($this->sDefaultConnection), $sMethod, $aArguments);
 		}
 		else {
-			throw $this->get('log')->exception('No default connection set!');
+			throw $this->getService('log')->exception('No default connection set!');
 		}
 	}
 

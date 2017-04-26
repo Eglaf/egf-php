@@ -35,8 +35,8 @@ abstract class Service {
      * @param string $sService
      * @return object
      */
-    protected function get($sService) {
-        return $this->app->get($sService);
+    protected function getService($sService) {
+        return $this->app->getService($sService);
     }
 
     /**

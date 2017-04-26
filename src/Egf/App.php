@@ -59,7 +59,7 @@ class App {
 	 * @return object
 	 * @throws \Exception
 	 */
-	public function get($sService) {
+	public function getService($sService) {
 		if ( ! (isset($this->aServices[ $sService ]))) {
 			$aService = $this->aInitiativeServices[ $sService ];
 			$sClass   = Util::slashing($aService['bundle'] . "\\" . $aService['class'], Util::slashingBackslash | Util::slashingAddLeft);
@@ -135,7 +135,7 @@ class App {
 				->loadBundles()
 				->loadServices();
 
-			$this->get('log')->info('Egf\App is running.');
+			$this->getService('log')->info('Egf\App is running.');
 		}
 		catch (\Exception $ex) {
 			die("<br />Can not initialize Egf\\App because: <br>{$ex->getMessage()}<br />");
