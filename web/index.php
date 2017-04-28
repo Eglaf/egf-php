@@ -1,25 +1,17 @@
 <?php
 
-/*require_once('ses.php');
-
-$session = new Session();
-// Set to true if using https
-$session->start_session('_s', false);
-
-//$_SESSION['k2'] = 'asdf';
-
-var_dump($_SESSION['k2']);
-
-die();*/
-
-
 require_once(__DIR__ . '/../vendor/autoload.php');
 
 // New EgfApp.
 $app = new \Egf\App(true);
 
+
+// todo http://marulanda.me/building-a-php-router/
+// todo controller/action
+
+
 //$app->getService('session')->set('k1', 'qwer2');
-var_dump($app->getService('session')->get('k1'));
+//var_dump($app->getService('session')->get('k1'));
 
 //if (!$app->get('permCache')->has('qwer/asdf')) {
 //    $app->get('permCache')->set('qwer/asdf', 'zxcv3');
